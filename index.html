@@ -83,7 +83,7 @@ details.card .dbody{padding:2px 17px 17px}
 <button type="button" data-gl="ja">日本語</button>
 </div></div>
 <div class="wrap">
-<h1>Custom Builder <span class="zh">定制选码</span> <span style="font-size:13px;color:#7ee787">新版 v29</span></h1>
+<h1>Custom Builder <span class="zh">定制选码</span> <span style="font-size:13px;color:#7ee787">新版 v30</span></h1>
 <div class="sub">Monster Hunter Wilds — pick a legal talisman or Gogma weapon, or set up your hunter profile, get a code, send the code to us. Every option on this page is checked against the game's own generation rules, so anything you can generate here can actually roll in game.<br><span class="zh">本页所有选项都按游戏原生生成规则校验，能生成的组合在游戏里都合法。</span><br>How it works: go through the tabs in order (1 → 5), add what you want to the list, then confirm on tab 5 and generate ONE code to send us (in your order chat or on Discord).<br><span class="zh">用法：按标签顺序 1 → 5 选，每选好一项就「加入清单」，最后在第 5 页确认清单、生成一条代码发给我们（下单的平台站内信或 Discord 都可以）。</span></div>
 
 <div class="langbar">🌐 <span id="langLbl">Language</span><select id="langSel"><option value="zh">简体中文</option><option value="tw">繁體中文</option><option value="en">English</option><option value="ja">日本語</option></select></div>
@@ -956,20 +956,15 @@ $("svBAdd").onclick = () => {
   const cp = $("svCap").value === "" ? -1 : Math.max(0, Math.min(9999, parseInt($("svCap").value, 10) || 0));
   const cv = $("svCrown").value.split(",").map(Number); const mn = cv[0], mx = cv[1];
   if (sl < 0 && cp < 0 && !mn && !mx) { $("svBOut").textContent = BL("✗ 先填讨伐/捕获数或选一个金冠。", "✗ Set a number or a crown first.", "✗ 先填討伐/捕獲數或選一個金冠。", "✗ 先に討伐・捕獲数か金冠を設定してください。"); return; }
-  const enc = (n, p) => (n + 1).toString(36).toUpperCase().padStart(p, "0");
-  const item = "B" + f.toString(36).toUpperCase().padStart(7, "0") + enc(sl, 3) + enc(cp, 3) + enc(mn > 0 ? mn : -1, 2) + enc(mx > 0 ? mx : -1, 2);
-  const parts = [];
-  if (sl >= 0) parts.push(BL("讨伐 ", "Slay ", "討伐 ", "討伐 ") + sl);
-  if (cp >= 0) parts.push(BL("捕获 ", "Capture ", "捕獲 ", "捕獲 ") + cp);
-  if (mn || mx) parts.push($("svCrown").selectedOptions[0].textContent);
-  pushItem({ summary: BL("怪物定制：", "Monster: ", "怪物訂製：", "モンスター指定：") + emName(b) + " — " + parts.join(" · "), code: "SHORT:" + item });
+  const res = kcMergeAdd("B", { fid: f, slay: sl, cap: cp, mn: mn > 0 ? mn : -1, mx: mx > 0 ? mx : -1 }, m => kcMonSummary(m, b));
+  if (res.status === "same") { $("svBOut").textContent = BL("✗ 这一只已经在清单里了，数值完全相同。", "✗ Already listed with identical values.", "✗ 這一隻已經在清單裡了，數值完全相同。", "✗ すでにリストにあり、値も同じです。"); return; }
   LIST_GEN = false; renderList(); flashAdd($("svBAdd"));
   document.getElementById("listCard").scrollIntoView({ behavior: "smooth", block: "start" });
 };
 $("svRand").onclick = () => {
   const total = parseInt($("svRandN").value, 10) || 0;
   if (total < 1 || total > 199999) { sayMsg($("svBOut"), BL("先填一个总狩猎数（1–199999）。", "Enter a total first (1–199999).", "先填一個總狩獵數（1–199999）。", "先に合計狩猟数を入力してください（1–199999）。"), false); return; }
-  const pool = BOSS.filter(x => !kcInList("B", x.f));
+  const pool = BOSS.filter(x => { const c = kcCurrent("B", x.f); return !c || (c.slay < 0 && c.cap < 0); });
   if (!pool.length) { sayMsg($("svBOut"), BL("全部怪物都已经在清单里了，没有新增。", "Every monster is already in your list — nothing added.", "全部怪物都已經在清單裡了，沒有新增。", "全モンスターはすでにリストにあります。"), false); return; }
   const shares = kcDistribute(total, pool.length, 12000);
   const enc = (n, p) => (n + 1).toString(36).toUpperCase().padStart(p, "0");
@@ -980,9 +975,8 @@ $("svRand").onclick = () => {
     let slayN = s - capN;
     if (slayN > 9999) { slayN = 9999; capN = s - 9999; }
     if (capN > 9999) { capN = 9999; slayN = s - 9999; }
-    const item = "B" + b.f.toString(36).toUpperCase().padStart(7, "0") + enc(slayN, 3) + enc(capN, 3) + enc(-1, 2) + enc(-1, 2);
-    const summary = BL("怪物定制：", "Monster: ", "怪物訂製：", "モンスター指定：") + emName(b) + " — " + BL("讨伐 ", "Slay ", "討伐 ", "討伐 ") + slayN + " · " + BL("捕获 ", "Capture ", "捕獲 ", "捕獲 ") + capN;
-    if (pushItem({ summary, code: "SHORT:" + item })) { added++; real += s; }
+    const res = kcMergeAdd("B", { fid: b.f, slay: slayN, cap: capN }, m => kcMonSummary(m, b));
+    if (res.status !== "same") { added++; real += s; }
   });
   LIST_GEN = false; renderList();
   sayMsg($("svBOut"), BL("已随机分配 " + real + " 到 " + added + " 只怪物（讨伐+捕获）", "Randomly spread " + real + " across " + added + " monsters (slay + capture)", "已隨機分配 " + real + " 到 " + added + " 隻怪物（討伐+捕獲）", "合計 " + real + " を " + added + " 頭にランダム配分しました"), true);
@@ -1030,6 +1024,79 @@ function kcDistribute(total, n, capEach){
   return out;
 }
 function kcInList(letter, fid){ const p = "SHORT:" + letter + b36p(fid, 7); return LIST.some(it => it.code.indexOf(p) === 0); }
+function kcKeyed(code){
+  if (code.indexOf("SHORT:") !== 0) return null;
+  const s = code.slice(6), L = s.charAt(0);
+  const num = (a, b) => parseInt(s.slice(a, b), 36) - 1;
+  const fid = parseInt(s.slice(1, 8), 36);
+  if (L === "A" && s.length === 11) return { L, fid, cap: num(8, 11) };
+  if (L === "E" && (s.length === 11 || s.length === 21)) { const r = { L, fid, cap: num(8, 11), size: -1, weight: -1 }; if (s.length === 21) { r.size = num(11, 16); r.weight = num(16, 21); } return r; }
+  if (L === "B" && s.length === 18) return { L, fid, slay: num(8, 11), cap: num(11, 14), mn: num(14, 16), mx: num(16, 18) };
+  if (L === "C" && s.length >= 11) { const r = { L, fid, cnt: num(8, 11), wep: {} }; const g = s.slice(11); for (let i = 0; i + 7 <= g.length; i += 7) { const idx = parseInt(g.charAt(i), 36); r.wep[idx] = [parseInt(g.slice(i + 1, i + 4), 36) - 1, parseInt(g.slice(i + 4, i + 7), 36) - 1]; } return r; }
+  return null;
+}
+function kcMergeInto(dst, srcF){
+  if (dst.L === "C") {
+    if (srcF.cnt >= 0) dst.cnt = srcF.cnt;
+    Object.keys(srcF.wep || {}).forEach(i => { const o = dst.wep[i] || [-1, -1]; if (srcF.wep[i][0] >= 0) o[0] = srcF.wep[i][0]; if (srcF.wep[i][1] >= 0) o[1] = srcF.wep[i][1]; dst.wep[i] = o; });
+    return dst;
+  }
+  ["cap", "size", "weight", "slay", "mn", "mx"].forEach(f => { if (srcF[f] !== undefined && srcF[f] >= 0) dst[f] = srcF[f]; });
+  return dst;
+}
+function kcBuild(k){
+  const seg = (v, w) => b36p(v + 1, w);
+  if (k.L === "A") return "SHORT:A" + b36p(k.fid, 7) + seg(k.cap, 3);
+  if (k.L === "E") { let c = "SHORT:E" + b36p(k.fid, 7) + seg(k.cap, 3); if (k.size >= 0 || k.weight >= 0) c += seg(k.size, 5) + seg(k.weight, 5); return c; }
+  if (k.L === "B") return "SHORT:B" + b36p(k.fid, 7) + seg(k.slay, 3) + seg(k.cap, 3) + seg(k.mn, 2) + seg(k.mx, 2);
+  if (k.L === "C") { let c = "SHORT:C" + b36p(k.fid, 7) + seg(k.cnt, 3); Object.keys(k.wep).map(Number).sort((a, b) => a - b).forEach(i => { const w = k.wep[i]; if (w[0] >= 0 || w[1] >= 0) c += i.toString(36).toUpperCase() + seg(w[0], 3) + seg(w[1], 3); }); return c; }
+  return "";
+}
+function kcCurrent(L, fid){
+  let cur = null;
+  LIST.forEach(it => { const k = kcKeyed(it.code); if (k && k.L === L && k.fid === fid) { if (!cur) cur = { L, fid, cap: -1, size: -1, weight: -1, slay: -1, mn: -1, mx: -1, cnt: -1, wep: {} }; kcMergeInto(cur, k); } });
+  return cur;
+}
+function kcMergeAdd(L, fields, buildSummary){
+  const fid = fields.fid;
+  const idxs = [];
+  LIST.forEach((it, i) => { const k = kcKeyed(it.code); if (k && k.L === L && k.fid === fid) idxs.push(i); });
+  const merged = { L, fid, cap: -1, size: -1, weight: -1, slay: -1, mn: -1, mx: -1, cnt: -1, wep: {} };
+  idxs.forEach(i => kcMergeInto(merged, kcKeyed(LIST[i].code)));
+  const before = idxs.length ? kcBuild(merged) : null;
+  kcMergeInto(merged, fields);
+  const code = kcBuild(merged);
+  if (before === code) return { status: "same" };
+  idxs.sort((a, b) => b - a).forEach(i => LIST.splice(i, 1));
+  LIST.push({ code, summary: buildSummary(merged) });
+  return { status: idxs.length ? "merged" : "new" };
+}
+function kcDone(outEl, res, okText){
+  if (res.status === "same") { flashAdd(outEl, BL("这一件已经在清单里了，没有重复添加。", "Already in your list — not added twice.", "這一件已經在清單裡了，沒有重複添加。", "すでにリストにあります。")); return false; }
+  flashAdd(outEl, okText + (res.status === "merged" ? BL("（已和清单里同一条合并）", " (merged with the existing entry)", "（已和清單裡同一條合併）", "（リスト内の同じ項目に統合しました）") : ""));
+  return true;
+}
+function kcFishSummary(m, x){
+  let s = BL("鱼类", "Fish", "魚類", "魚類") + "：" + emName(x);
+  if (m.cap >= 0) s += " — " + BL("捕获 ", "Captures ", "捕獲 ", "捕獲 ") + m.cap;
+  if (m.size >= 0) {
+    const cr = (typeof FISHCROWN !== "undefined") ? FISHCROWN[String(m.fid)] : null;
+    const isCrown = cr && cr[0] === m.size;
+    s += (m.cap >= 0 ? " · " : " — ") + "👑 " + (isCrown ? BL("最大金冠 ", "Gold crown ", "最大金冠 ", "最大金冠 ") : BL("最大尺寸 ", "Max size ", "最大尺寸 ", "最大サイズ ")) + (m.size / 1000).toFixed(3) + " cm" + (m.weight >= 0 ? "·" + Math.round(m.weight / 100) + " g" : "");
+  }
+  return s;
+}
+function kcAnimSummary(m, x){
+  return BL("环境生物", "Endemic Life", "環境生物", "環境生物") + "：" + emName(x) + " — " + BL("捕获 ", "Captures ", "捕獲 ", "捕獲 ") + m.cap;
+}
+function kcMonSummary(m, b){
+  const parts = [];
+  if (m.slay >= 0) parts.push(BL("讨伐 ", "Slay ", "討伐 ", "討伐 ") + m.slay);
+  if (m.cap >= 0) parts.push(BL("捕获 ", "Capture ", "捕獲 ", "捕獲 ") + m.cap);
+  if (m.mn >= 0 || m.mx >= 0) { const v = (m.mn >= 0 ? m.mn : 0) + "," + (m.mx >= 0 ? m.mx : 0); const opt = [...$("svCrown").options].find(o => o.value === v); parts.push(opt ? opt.textContent : "👑"); }
+  return BL("怪物定制：", "Monster: ", "怪物訂製：", "モンスター指定：") + emName(b) + " — " + parts.join(" · ");
+}
+
 function reportSection(id, title, data, letter, noun){
   const det = document.createElement("details"); det.className = "card";
   det.innerHTML = "<summary>" + title + "</summary><div class=\"dbody\"><div id=\"" + id + "Pick\"></div><div style=\"margin-top:8px\"><label>\u6355\u83b7\u6570 Captures <input type=\"number\" id=\"" + id + "Cap\" min=\"0\" max=\"9999\" placeholder=\"\u4f8b\u5982 999\" style=\"width:110px\"></label><button class=\"addbtn\" id=\"" + id + "Add\" type=\"button\" style=\"margin-left:8px\">\uff0b Add to List \u52a0\u5165\u6e05\u5355</button></div><div class=\"out\" id=\"" + id + "Out\"></div>" + "<div style=\"margin-top:10px;border-top:1px solid #ffffff22;padding-top:10px\"><label>\u603b\u6355\u83b7\u6570 Total captures <input type=\"number\" id=\"" + id + "RandN\" min=\"1\" max=\"99999\" placeholder=\"3000\" style=\"width:110px\"></label><button class=\"addbtn\" id=\"" + id + "Rand\" type=\"button\" style=\"margin-left:8px\">\ud83c\udfb2 \u968f\u673a\u5206\u914d Random Mix</button><div class=\"dim\" style=\"margin-top:4px\">\u586b\u603b\u6570\u540e\u968f\u673a\u5206\u914d\u5230\u6bcf\u4e00\u79cd\uff0c\u50cf\u957f\u671f\u6e38\u73a9\u6512\u51fa\u6765\u7684\u8bb0\u5f55\u3002Randomly spreads a total across all species \u2014 looks naturally played.</div></div>" + "</div>";
@@ -1041,22 +1108,21 @@ function reportSection(id, title, data, letter, noun){
     if (!pick.value){ flashAdd($(id + "Out"), "\u5148\u9009\u4e00\u4e2a" + noun + "\u3002Pick one first."); $(id + "Out").scrollIntoView({ block: "center" }); return; }
     if (capRaw === "" || +capRaw < 0 || +capRaw > 9999){ flashAdd($(id + "Out"), "\u586b\u4e00\u4e2a 0\u20139999 \u7684\u6355\u83b7\u6570\u3002Enter a capture count 0-9999."); return; }
     const x = data.find(y => String(y.f) === pick.value);
-    const item = letter + b36p(+pick.value, 7) + b36p(+capRaw + 1, 3);
-    if (pushItem({ code: "SHORT:" + item, summary: BL("环境生物", "Endemic Life", "環境生物", "環境生物") + "：" + emName(x) + " — " + BL("捕获 ", "Captures ", "捕獲 ", "捕獲 ") + capRaw })) { flashAdd($(id + "Out"), "\u5df2\u52a0\u5165\u6e05\u5355 Added: " + x.cn + " \u6355\u83b7 " + capRaw); $(id + "Cap").value = ""; }
-    else flashAdd($(id + "Out"), BL("这一件已经在清单里了，没有重复添加。", "Already in your list — not added twice.", "這一件已經在清單裡了，沒有重複添加。", "この項目はすでにリストにあります。重複して追加しませんでした。"));
+    const res = kcMergeAdd(letter, { fid: +pick.value, cap: +capRaw }, m => kcAnimSummary(m, x));
+    if (kcDone($(id + "Out"), res, "已加入清单 Added: " + x.cn)) $(id + "Cap").value = "";
     renderList();
   };
   $(id + "Rand").onclick = () => {
     const total = parseInt($(id + "RandN").value, 10) || 0;
     if (total < 1 || total > 99999) { sayMsg($(id + "Out"), BL("先填一个总捕获数（1–99999）。", "Enter a total first (1–99999).", "先填一個總捕獲數（1–99999）。", "先に合計捕獲数を入力してください（1–99999）。"), false); return; }
-    const pool = data.filter(x => !kcInList(letter, x.f));
+    const pool = data.filter(x => !kcCurrent(letter, x.f));
     if (!pool.length) { sayMsg($(id + "Out"), BL("全部种类都已经在清单里了，没有新增。", "Every species is already in your list — nothing added.", "全部種類都已經在清單裡了，沒有新增。", "全種はすでにリストにあります。"), false); return; }
     const shares = kcDistribute(total, pool.length, 9999);
     let added = 0, real = 0;
     pool.forEach((x, i) => {
       const c = shares[i]; if (c <= 0) return;
-      const item = letter + b36p(x.f, 7) + b36p(c + 1, 3);
-      if (pushItem({ code: "SHORT:" + item, summary: BL("环境生物", "Endemic Life", "環境生物", "環境生物") + "：" + emName(x) + " — " + BL("捕获 ", "Captures ", "捕獲 ", "捕獲 ") + c })) { added++; real += c; }
+      const res = kcMergeAdd(letter, { fid: x.f, cap: c }, m => kcAnimSummary(m, x));
+      if (res.status !== "same") { added++; real += c; }
     });
     LIST_GEN = false; renderList();
     sayMsg($(id + "Out"), BL("已随机分配 " + real + " 到 " + added + " 种" + noun, "Randomly spread " + real + " across " + added + " species", "已隨機分配 " + real + " 到 " + added + " 種", "合計 " + real + " を " + added + " 種にランダム配分しました"), true);
@@ -1100,37 +1166,32 @@ reportSection("an", "\u73af\u5883\u751f\u7269 Endemic Life\uff08\u9010\u53ea\u5b
     if (capRaw !== "" && (+capRaw < 0 || +capRaw > 9999)){ flashAdd($("fiOut"), "\u6355\u83b7\u6570 0\u20139999\u3002Captures 0-9999."); return; }
     let item, summ = BL("鱼类", "Fish", "魚類", "魚類") + "：" + emName(x);
     const cap = capRaw === "" ? -1 : +capRaw;
-    if (cap >= 0){ summ += " \u2014 \u6355\u83b7 " + cap; }
-    if (sizeRaw){ item = "E" + b36p(+pick.value, 7) + b36p(cap + 1, 3) + b36p(sizeRaw + 1, 5) + b36p(weightRaw + 1, 5); summ += (cap >= 0 ? " \u00b7 " : " \u2014 ") + tags.join(" "); }
-    else { item = "E" + b36p(+pick.value, 7) + b36p(cap + 1, 3); }
-    if (pushItem({ code: "SHORT:" + item, summary: summ })) { flashAdd($("fiOut"), "\u5df2\u52a0\u5165\u6e05\u5355 Added: " + x.cn + (tags.length ? " " + tags.join(" ") : "")); $("fiCap").value = ""; $("fiSize").value = ""; $("fiW").value = ""; $("fiCrown").value = "0"; }
-    else flashAdd($("fiOut"), BL("这一件已经在清单里了，没有重复添加。", "Already in your list — not added twice.", "這一件已經在清單裡了，沒有重複添加。", "この項目はすでにリストにあります。重複して追加しませんでした。"));
+    const res = kcMergeAdd("E", { fid: +pick.value, cap, size: sizeRaw ? sizeRaw : -1, weight: sizeRaw ? weightRaw : -1 }, m => kcFishSummary(m, x));
+    if (kcDone($("fiOut"), res, "已加入清单 Added: " + x.cn + (tags.length ? " " + tags.join(" ") : ""))) { $("fiCap").value = ""; $("fiSize").value = ""; $("fiW").value = ""; $("fiCrown").value = "0"; }
     renderList();
   };
   $("fiCrownAll").onclick = () => {
     let added = 0, skipped = 0;
     FISHES.forEach(x => {
       const cr = FISHCROWN[String(x.f)]; if (!cr) { skipped++; return; }
-      if (kcInList("E", x.f)) { skipped++; return; }
-      const item = "E" + b36p(x.f, 7) + b36p(0, 3) + b36p(cr[0] + 1, 5) + b36p(cr[1] + 1, 5);
-      if (pushItem({ code: "SHORT:" + item, summary: BL("鱼类", "Fish", "魚類", "魚類") + "：" + emName(x) + " — 👑 " + BL("最大金冠", "Gold crown", "最大金冠", "最大金冠") + " " + (cr[0] / 1000).toFixed(3) + " cm·" + Math.round(cr[1] / 100) + " g" })) added++;
-      else skipped++;
+      const res = kcMergeAdd("E", { fid: x.f, size: cr[0], weight: cr[1] }, m => kcFishSummary(m, x));
+      if (res.status === "same") skipped++; else added++;
     });
     LIST_GEN = false; renderList();
-    if (added) sayMsg($("fiOut"), BL("已加入清单：全鱼金冠 ×" + added + (skipped ? "（跳过 " + skipped + " 种已在清单里的）" : ""), "Added: all-fish gold crowns ×" + added + (skipped ? " (skipped " + skipped + " already listed)" : ""), "已加入清單：全魚金冠 ×" + added, "リストに追加：全魚種の最大金冠 ×" + added), true);
-    else sayMsg($("fiOut"), BL("20 种鱼都已经在清单里了，没有新增。", "All 20 fish are already in your list — nothing added.", "20 種魚都已經在清單裡了，沒有新增。", "全 20 種はすでにリストにあります。"), false);
+    if (added) sayMsg($("fiOut"), BL("已加入清单：全鱼金冠 ×" + added + (skipped ? "（跳过 " + skipped + " 种已有金冠的）" : ""), "Added: all-fish gold crowns ×" + added + (skipped ? " (skipped " + skipped + " already crowned)" : ""), "已加入清單：全魚金冠 ×" + added, "リストに追加：全魚種の最大金冠 ×" + added), true);
+    else sayMsg($("fiOut"), BL("20 种鱼都已经有金冠了，没有新增。", "All 20 fish already have gold crowns — nothing added.", "20 種魚都已經有金冠了，沒有新增。", "全 20 種に金冠は設定済みです。"), false);
   };
   $("fiRand").onclick = () => {
     const total = parseInt($("fiRandN").value, 10) || 0;
     if (total < 1 || total > 99999) { sayMsg($("fiOut"), BL("先填一个总捕获数（1–99999）。", "Enter a total first (1–99999).", "先填一個總捕獲數（1–99999）。", "先に合計捕獲数を入力してください（1–99999）。"), false); return; }
-    const pool = FISHES.filter(x => !kcInList("E", x.f));
+    const pool = FISHES.filter(x => { const c = kcCurrent("E", x.f); return !c || c.cap < 0; });
     if (!pool.length) { sayMsg($("fiOut"), BL("20 种鱼都已经在清单里了，没有新增。", "All 20 fish are already in your list — nothing added.", "20 種魚都已經在清單裡了，沒有新增。", "全 20 種はすでにリストにあります。"), false); return; }
     const shares = kcDistribute(total, pool.length, 9999);
     let added = 0, real = 0;
     pool.forEach((x, i) => {
       const c = shares[i]; if (c <= 0) return;
-      const item = "E" + b36p(x.f, 7) + b36p(c + 1, 3);
-      if (pushItem({ code: "SHORT:" + item, summary: BL("鱼类", "Fish", "魚類", "魚類") + "：" + emName(x) + " — " + BL("捕获 ", "Captures ", "捕獲 ", "捕獲 ") + c })) { added++; real += c; }
+      const res = kcMergeAdd("E", { fid: x.f, cap: c }, m => kcFishSummary(m, x));
+      if (res.status !== "same") { added++; real += c; }
     });
     LIST_GEN = false; renderList();
     sayMsg($("fiOut"), BL("已随机分配 " + real + " 到 " + added + " 种鱼", "Randomly spread " + real + " across " + added + " fish", "已隨機分配 " + real + " 到 " + added + " 種魚", "合計 " + real + " を " + added + " 種にランダム配分しました"), true);
@@ -1159,7 +1220,7 @@ reportSection("an", "\u73af\u5883\u751f\u7269 Endemic Life\uff08\u9010\u53ea\u5b
     if (!catPick.value){ flashAdd($("qOut"), "\u5148\u9009\u7c7b\u522b\u3002Pick a category first."); return; }
     const v = $("qCatNum").value.trim();
     if (v !== "" && (+v < 0 || +v > 46655)){ flashAdd($("qOut"), "\u5b8c\u6210\u6570 0\u201346655\u3002"); return; }
-    let groups = ""; const wpTxt = [];
+    let groups = ""; const wpTxt = []; const wepObj = {};
     document.querySelectorAll(".wqM").forEach(inp => {
       const idx = +inp.dataset.i;
       const sv = document.querySelector(".wqS[data-i=\"" + idx + "\"]").value.trim();
@@ -1167,21 +1228,25 @@ reportSection("an", "\u73af\u5883\u751f\u7269 Endemic Life\uff08\u9010\u53ea\u5b
       if (mv === "" && sv === "") return;
       if ((mv !== "" && (+mv < 0 || +mv > 46655)) || (sv !== "" && (+sv < 0 || +sv > 46655))){ flashAdd($("qOut"), "\u6b66\u5668\u6b21\u6570 0\u201346655\u3002"); groups = null; return; }
       groups += idx.toString(36).toUpperCase() + b36p((mv === "" ? 0 : +mv + 1), 3) + b36p((sv === "" ? 0 : +sv + 1), 3);
+      wepObj[idx] = [mv === "" ? -1 : +mv, sv === "" ? -1 : +sv];
       wpTxt.push(wName(WTYPES[idx], idx) + (mv !== "" ? " \u4e3b" + mv : "") + (sv !== "" ? " \u526f" + sv : ""));
     });
     if (groups === null) return;
     if (v === "" && !groups){ flashAdd($("qOut"), "\u81f3\u5c11\u586b\u5b8c\u6210\u6570\u6216\u4e00\u4e2a\u6b66\u5668\u6b21\u6570\u3002"); return; }
     const x = CATS.find(y => String(y.f) === catPick.value);
-    const item = "C" + b36p(+catPick.value, 7) + b36p(v === "" ? 0 : +v + 1, 3) + groups;
-    if (pushItem({ code: "SHORT:" + item, summary: BL("任务·类别", "Quest category", "任務·類別", "クエスト・カテゴリ") + "：" + emName(x) + (v !== "" ? " \u2014 \u5b8c\u6210\u6570 " + v : "") + (wpTxt.length ? (v !== "" ? " \u00b7 " : " \u2014 ") + "\u6b66\u5668\u6b21\u6570 " + wpTxt.join("\u3001") : "") })) { flashAdd($("qOut"), "\u5df2\u52a0\u5165\u6e05\u5355 Added: " + x.cn); $("qCatNum").value = ""; document.querySelectorAll(".wqM,.wqS").forEach(i2 => i2.value = ""); }
-    else flashAdd($("qOut"), BL("这一件已经在清单里了，没有重复添加。", "Already in your list — not added twice.", "這一件已經在清單裡了，沒有重複添加。", "この項目はすでにリストにあります。重複して追加しませんでした。"));
+    const res = kcMergeAdd("C", { fid: +catPick.value, cnt: v === "" ? -1 : +v, wep: wepObj }, m => {
+      const wp = Object.keys(m.wep).map(Number).sort((a, b) => a - b).map(i => { const w = m.wep[i]; return wName(WTYPES[i], i) + (w[0] >= 0 ? " 主" + w[0] : "") + (w[1] >= 0 ? " 副" + w[1] : ""); }).join("、");
+      return BL("任务·类别", "Quest category", "任務·類別", "クエスト・カテゴリ") + "：" + emName(x) + (m.cnt >= 0 ? " — 完成数 " + m.cnt : "") + (wp ? (m.cnt >= 0 ? " · " : " — ") + "武器次数 " + wp : "");
+    });
+    if (kcDone($("qOut"), res, "已加入清单 Added")) { $("qCatNum").value = ""; document.querySelectorAll(".wqM,.wqS").forEach(i2 => { i2.value = ""; }); }
     renderList();
   };
   $("qAdd").onclick = () => {
     const v = $("qNum").value.trim();
     if (v === "" || +v < 0 || +v > 46655){ flashAdd($("qOut"), "\u586b\u4e00\u4e2a\u6570\u5b57\u3002Enter a number."); return; }
-    if (pushItem({ code: "SHORT:Q" + b36p(+v + 1, 3), summary: BL("任务完成数：全部设为 ", "Quest completions: all set to ", "任務完成數：全部設為 ", "クエストクリア回数：すべて ") + v })) { flashAdd($("qOut"), "\u5df2\u52a0\u5165\u6e05\u5355 Added"); $("qNum").value = ""; }
-    else flashAdd($("qOut"), BL("这一件已经在清单里了，没有重复添加。", "Already in your list — not added twice.", "這一件已經在清單裡了，沒有重複添加。", "この項目はすでにリストにあります。重複して追加しませんでした。"));
+    for (let i = LIST.length - 1; i >= 0; i--) if (LIST[i].code.indexOf("SHORT:Q") === 0) LIST.splice(i, 1);
+    LIST.push({ code: "SHORT:Q" + b36p(+v + 1, 3), summary: BL("任务完成数：全部设为 ", "Quest completions: all set to ", "任務完成數：全部設為 ", "クエストクリア回数：すべて ") + v });
+    flashAdd($("qOut"), "已加入清单 Added"); $("qNum").value = "";
     renderList();
   };
 })();
