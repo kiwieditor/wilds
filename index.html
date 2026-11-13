@@ -83,7 +83,7 @@ details.card .dbody{padding:2px 17px 17px}
 <button type="button" data-gl="ja">日本語</button>
 </div></div>
 <div class="wrap">
-<h1>Custom Builder <span class="zh">定制选码</span> <span style="font-size:13px;color:#7ee787">新版 v30</span></h1>
+<h1>Custom Builder <span class="zh">定制选码</span> <span style="font-size:13px;color:#7ee787">新版 v31</span></h1>
 <div class="sub">Monster Hunter Wilds — pick a legal talisman or Gogma weapon, or set up your hunter profile, get a code, send the code to us. Every option on this page is checked against the game's own generation rules, so anything you can generate here can actually roll in game.<br><span class="zh">本页所有选项都按游戏原生生成规则校验，能生成的组合在游戏里都合法。</span><br>How it works: go through the tabs in order (1 → 5), add what you want to the list, then confirm on tab 5 and generate ONE code to send us (in your order chat or on Discord).<br><span class="zh">用法：按标签顺序 1 → 5 选，每选好一项就「加入清单」，最后在第 5 页确认清单、生成一条代码发给我们（下单的平台站内信或 Discord 都可以）。</span></div>
 
 <div class="langbar">🌐 <span id="langLbl">Language</span><select id="langSel"><option value="zh">简体中文</option><option value="tw">繁體中文</option><option value="en">English</option><option value="ja">日本語</option></select></div>
@@ -741,7 +741,9 @@ function buildBatch() {
   const shorts = LIST.map(x => shortItem(x.code));
   if (shorts.every(x => x)) {
     const payload = B36(LIST.length) + "-" + shorts.join(".");
-    return "KCW1-S" + payload + "-" + batchCk(payload);
+    const sCode = "KCW1-S" + payload + "-" + batchCk(payload);
+    const cCode = buildBatchC(shorts);
+    return (cCode && cCode.length <= sCode.length) ? cCode : sCode;
   }
   let sum = LIST.length;
   for (const it of LIST) sum += parseInt(it.code.split("-").pop(), 10) || 0;
@@ -1134,6 +1136,69 @@ const FISHCROWN = {"3509023616": [107552, 16012], "3328476352": [99010, 23169], 
 const STAGES = [{"f":3068809728,"cn":"\u5929\u5811\u6c99\u539f","en":"Windward Plains ST101"},{"f":3435138240,"cn":"\u7eef\u7ea2\u68ee\u6797","en":"Scarlet Forest ST102"},{"f":3043886080,"cn":"\u6d8c\u6cb9\u8c37","en":"Oilwell Basin ST103"},{"f":1182228864,"cn":"\u51b0\u96fe\u65ad\u5d16","en":"Iceshard Cliffs ST104"},{"f":327401792,"cn":"\u9f99\u90fd\u9057\u8ff9","en":"Ruins of Wyveria ST105"},{"f":1181994624,"cn":"\u9f99\u8c37\u9057\u5740","en":"Wounded Hollow ST401"},{"f":544388992,"cn":"\u7279\u6b8a\u5730\u533a","en":"Special Field ST402"},{"f":905584064,"cn":"\u7279\u6b8a\u5730\u533a","en":"Special Field ST403"},{"f":2009549184,"cn":"\u7279\u6b8a\u5730\u533a","en":"Special Field ST404"},{"f":13836,"cn":"\u7279\u6b8a\u5730\u533a","en":"Special Field ST405"}];
 const CATS = [{"f":3213146240,"cn":"\u5173\u952e\u4efb\u52a1","en":"Assignments"},{"f":2913193600,"cn":"\u81ea\u7531\u4efb\u52a1","en":"Optional Quests"},{"f":3056833408,"cn":"\u5b9e\u5730\u8c03\u67e5\u4efb\u52a1","en":"Field Surveys"},{"f":590510720,"cn":"\u8c03\u67e5\u4efb\u52a1","en":"Investigations"},{"f":1738735616,"cn":"\u6597\u6280\u5927\u4f1a\u4efb\u52a1","en":"Arena Quests"},{"f":630192064,"cn":"\u6311\u6218\u4efb\u52a1","en":"Challenge Quests"},{"f":1025928384,"cn":"\u6d3b\u52a8\u4efb\u52a1","en":"Event Quests"},{"f":2286463872,"cn":"\u81ea\u7531\u6311\u6218\u4efb\u52a1","en":"Free Challenge Quests"}];
 const WTYPES = [{"cn":"\u5927\u5251","en":"Great Sword"},{"cn":"\u5355\u624b\u5251","en":"Sword & Shield"},{"cn":"\u53cc\u5251","en":"Dual Blades"},{"cn":"\u592a\u5200","en":"Long Sword"},{"cn":"\u5927\u9524","en":"Hammer"},{"cn":"\u72e9\u730e\u7b1b","en":"Hunting Horn"},{"cn":"\u957f\u67aa","en":"Lance"},{"cn":"\u94f3\u67aa","en":"Gunlance"},{"cn":"\u65a9\u65a7","en":"Switch Axe"},{"cn":"\u76fe\u65a7","en":"Charge Blade"},{"cn":"\u64cd\u866b\u68cd","en":"Insect Glaive"},{"cn":"\u5f13","en":"Bow"},{"cn":"\u91cd\u5f08","en":"Heavy Bowgun"},{"cn":"\u8f7b\u5f08","en":"Light Bowgun"}];
+
+/* ================= KCW1-C compressed batch (v31) ================= */
+const FIDSORT = { B: BOSS.map(x => x.f).sort((a, b) => a - b), A: ANIMALS.map(x => x.f).sort((a, b) => a - b), E: FISHES.map(x => x.f).sort((a, b) => a - b), R: STAGES.map(x => x.f).sort((a, b) => a - b), C: CATS.map(x => x.f).sort((a, b) => a - b) };
+const FIDIDX = {}; Object.keys(FIDSORT).forEach(L => { FIDIDX[L] = {}; FIDSORT[L].forEach((f, i) => FIDIDX[L][f] = i); });
+function fidHashC(){ const t = "B:" + FIDSORT.B.join(",") + "|A:" + FIDSORT.A.join(",") + "|E:" + FIDSORT.E.join(",") + "|R:" + FIDSORT.R.join(",") + "|C:" + FIDSORT.C.join(","); let s = 0; for (let i = 0; i < t.length; i++) s = (s + t.charCodeAt(i) * (i + 1)) % 46656; return B36(s).padStart(3, "0"); }
+function kcShortKeyed(seg){
+  const L = seg.charAt(0);
+  if (L === "R") { const m = seg.match(/^R([0-9A-Z]{7})([0-9A-Z]{3})$/); return m ? { L, fid: parseInt(m[1], 36), rest: m[2] } : null; }
+  if (L === "B" || L === "A" || L === "E" || L === "C") {
+    if (!kcKeyed("SHORT:" + seg)) return null;
+    return { L, fid: parseInt(seg.slice(1, 8), 36), rest: seg.slice(8) };
+  }
+  return null;
+}
+function kcRowC(L, fid, rest){
+  const idx = FIDIDX[L][fid];
+  if (idx === undefined) return null;
+  if (L === "R" || L === "C") return L + B36(idx) + rest;
+  return L + B36(idx).padStart(2, "0") + rest;
+}
+const KC_SPANS = { B: [[0, 3], [3, 6], [6, 8], [8, 10]], A: [[0, 3]], E: [[0, 3]] };
+function kcCompat(rest, base, spans){ return spans.every(([a, b]) => { const f = rest.slice(a, b), bf = base.slice(a, b); return f === bf || !/^0+$/.test(f); }); }
+function kcPlanCat(L, entries){
+  for (const e of entries) if (!kcRowC(L, e.fid, e.rest)) return null;
+  const plan = { runSeg: null, base: null, coverAll: false };
+  if ((L === "B" || L === "A" || L === "E") && entries.length === FIDSORT[L].length && new Set(entries.map(e => e.fid)).size === entries.length) {
+    if (L === "E") {
+      const crownRest = f => { const cr = FISHCROWN[String(f)]; return cr ? "000" + b36p(cr[0] + 1, 5) + b36p(cr[1] + 1, 5) : null; };
+      if (entries.every(e => crownRest(e.fid) === e.rest)) { plan.runSeg = "Z"; plan.coverAll = true; return plan; }
+      if (entries.some(e => e.rest.length !== 3)) return plan;
+    }
+    const cnt = {}; entries.forEach(e => cnt[e.rest] = (cnt[e.rest] || 0) + 1);
+    const modal = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
+    const mc = cnt[modal];
+    if (mc >= 4 && mc * 2 >= entries.length && entries.every(e => kcCompat(e.rest, modal, KC_SPANS[L]))) {
+      const runSeg = (L === "B" ? "M" : L === "A" ? "L" : "Y") + modal;
+      const rowsLen = entries.reduce((a, e) => a + kcRowC(L, e.fid, e.rest).length + 1, 0);
+      const candLen = runSeg.length + 1 + entries.filter(e => e.rest !== modal).reduce((a, e) => a + kcRowC(L, e.fid, e.rest).length + 1, 0);
+      if (candLen < rowsLen) { plan.runSeg = runSeg; plan.base = modal; }
+    }
+  }
+  return plan;
+}
+function buildBatchC(shorts){
+  const parsed = shorts.map(seg => ({ seg, k: kcShortKeyed(seg) }));
+  const byCat = { B: [], A: [], E: [], R: [], C: [] };
+  parsed.forEach(p => { if (p.k) byCat[p.k.L].push({ fid: p.k.fid, rest: p.k.rest }); });
+  const plans = {};
+  for (const L of Object.keys(byCat)) if (byCat[L].length) { const pl = kcPlanCat(L, byCat[L]); if (!pl) return null; plans[L] = pl; }
+  const out = ["V" + fidHashC()];
+  const runDone = {};
+  parsed.forEach(p => {
+    if (!p.k) { out.push(p.seg); return; }
+    const L = p.k.L, pl = plans[L];
+    if (pl.runSeg && !runDone[L]) { out.push(pl.runSeg); runDone[L] = 1; }
+    if (pl.coverAll) return;
+    if (pl.runSeg && p.k.rest === pl.base) return;
+    out.push(kcRowC(L, p.k.fid, p.k.rest));
+  });
+  const payload = B36(out.length) + "-" + out.join(".");
+  return "KCW1-C" + payload + "-" + batchCk(payload);
+}
+
 reportSection("an", "\u73af\u5883\u751f\u7269 Endemic Life\uff08\u9010\u53ea\u5b9a\u5236\uff09", ANIMALS, "A", "\u73af\u5883\u751f\u7269");
 (function(){
   const det = document.createElement("details"); det.className = "card";
