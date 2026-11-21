@@ -83,7 +83,7 @@ details.card .dbody{padding:2px 17px 17px}
 <button type="button" data-gl="ja">日本語</button>
 </div></div>
 <div class="wrap">
-<h1>Custom Builder <span class="zh">定制选码</span> <span style="font-size:13px;color:#7ee787">新版 v36</span></h1>
+<h1>Custom Builder <span class="zh">定制选码</span> <span style="font-size:13px;color:#7ee787">新版 v37</span></h1>
 <div class="sub">Monster Hunter Wilds — pick a legal talisman or Gogma weapon, or set up your hunter profile, get a code, send the code to us. Every option on this page is checked against the game's own generation rules, so anything you can generate here can actually roll in game.<br><span class="zh">本页所有选项都按游戏原生生成规则校验，能生成的组合在游戏里都合法。</span><br>How it works: go through the tabs in order (1 → 5), add what you want to the list, then confirm on tab 5 and generate ONE code to send us (in your order chat or on Discord).<br><span class="zh">用法：按标签顺序 1 → 5 选，每选好一项就「加入清单」，最后在第 5 页确认清单、生成一条代码发给我们（下单的平台站内信或 Discord 都可以）。</span></div>
 
 <div class="langbar">🌐 <span id="langLbl">Language</span><select id="langSel"><option value="zh">简体中文</option><option value="tw">繁體中文</option><option value="en">English</option><option value="ja">日本語</option></select></div>
@@ -945,11 +945,14 @@ window.__langRerender = function(){
 const SVC_NAMES = ["金钱 MAX","公会点数 MAX","道具箱全部 ×9900","机械素材 ×9990","素材全加 ×9900","消耗品全加 ×9900","弹药全加 ×9900","食材全加 ×9900","宝珠全加 ×100","毕业巨戟龙武器 ×491","毕业护石 ×219","角色幻化全解锁","Palico 幻化全解锁","Palico 装备+防具全套"];
 const BOSS = [{"f":26,"cn":"雌火龙","en":"Rathian"},{"f":1965232896,"cn":"火龙","en":"Rathalos"},{"f":1411933184,"cn":"护火龙","en":"Guardian Rathalos"},{"f":3759888896,"cn":"铠龙","en":"Gravios"},{"f":402056736,"cn":"怪鸟","en":"Yian Kut-Ku"},{"f":1049705664,"cn":"毒怪鸟","en":"Gypceros"},{"f":2854766208,"cn":"桃毛兽王","en":"Congalala"},{"f":2129596800,"cn":"雪狮子王","en":"Blangonga"},{"f":2931596800,"cn":"影蜘蛛","en":"Nerscylla"},{"f":3536716480,"cn":"黑蚀龙","en":"Gore Magala"},{"f":107194928,"cn":"护雷颚龙","en":"Guardian Fulgur Anjanath"},{"f":1663995904,"cn":"护凶爪龙","en":"Guardian Ebony Odogaron"},{"f":15,"cn":"辟兽","en":"Doshaguma"},{"f":2378537600,"cn":"护辟兽","en":"Guardian Doshaguma"},{"f":16,"cn":"沙海龙","en":"Balahara"},{"f":33,"cn":"缠蛙","en":"Chatacabra"},{"f":4260029776,"cn":"炎尾龙","en":"Quematrice"},{"f":2766005120,"cn":"刺花蜘蛛","en":"Lala Barina"},{"f":567628288,"cn":"沼喷龙","en":"Rompopolo"},{"f":2747602688,"cn":"煌雷龙","en":"Rey Dau"},{"f":1467998976,"cn":"波衣龙","en":"Uth Duna"},{"f":1657778432,"cn":"狱焰蛸","en":"Nu Udra"},{"f":777460864,"cn":"赫猿兽","en":"Ajarakan"},{"f":746996864,"cn":"锁刃龙","en":"Arkveld"},{"f":4011312896,"cn":"护锁刃龙","en":"Guardian Arkveld"},{"f":222933952,"cn":"风铗龙","en":"Hirabami"},{"f":1553456768,"cn":"冻峰龙","en":"Jin Dahaad"},{"f":1401863296,"cn":"暗器蛸","en":"Xu Wu"},{"f":2291498624,"cn":"白炽龙","en":"Zoh Shia"},{"f":32634,"cn":"泡狐龙","en":"Mizutsune"},{"f":3211124352,"cn":"海龙","en":"Lagiacrus"},{"f":25,"cn":"千刃龙","en":"Seregios"},{"f":21849,"cn":"游星欧米茄","en":"Omega Planetes"},{"f":13052,"cn":"巨戟龙","en":"Gogmazios"}];
 const NOCAPB = {4011312896:1, 1553456768:1, 2291498624:1, 21849:1, 13052:1}; // 护锁刃龙/冻峰龙/白炽龙/游星欧米茄/巨戟龙：不可捕获、无金冠
+const NOCOUNTB = {4011312896:1}; // 护锁刃龙：剧情限定（击退+讨伐各 1 次的一次性剧情任务，无刷新/调查），讨伐次数也不可改
 let svNcNote = false;
 function svMonSync(){
-  const b = BOSS.find(x => x.f === +$("svMon").value); const nc = !!(b && NOCAPB[b.f]);
-  $("svCap").disabled = nc; $("svCrown").disabled = nc;
-  if (nc) { $("svCap").value = ""; $("svCrown").value = "0,0"; svNcNote = true;
+  const b = BOSS.find(x => x.f === +$("svMon").value); const nc = !!(b && NOCAPB[b.f]); const nct = !!(b && NOCOUNTB[b.f]);
+  $("svSlay").disabled = nct; $("svCap").disabled = nc; $("svCrown").disabled = nc;
+  if (nct) { $("svSlay").value = ""; $("svCap").value = ""; $("svCrown").value = "0,0"; svNcNote = true;
+    $("svBOut").textContent = BL("护锁刃龙是剧情限定怪：只能在剧情任务里击退、讨伐各 1 次，不能捕获、也没有金冠，次数不能修改。", "Guardian Arkveld is story-limited: it can only be repelled and slain once each in story quests — it can't be captured, has no crowns, and its counts can't be changed.", "護鎖刃龍是劇情限定怪：只能在劇情任務裡擊退、討伐各 1 次，不能捕獲、也沒有金冠，次數不能修改。", "護鎖刃龍はストーリー限定です。ストーリークエストで撃退・討伐が各1回のみで、捕獲できず、金冠もなく、回数は変更できません。"); }
+  else if (nc) { $("svCap").value = ""; $("svCrown").value = "0,0"; svNcNote = true;
     $("svBOut").textContent = BL("这只怪物不能捕获、也没有金冠，只能改讨伐数。", "This monster can't be captured and has no crowns — slay count only.", "這隻怪物不能捕獲、也沒有金冠，只能改討伐數。", "このモンスターは捕獲できず、金冠もありません。討伐数のみ変更できます。"); }
   else if (svNcNote) { svNcNote = false; $("svBOut").textContent = ""; }
 }
@@ -987,6 +990,7 @@ $("svAdd").onclick = () => {
 $("svBAdd").onclick = () => {
   const f = +$("svMon").value; const b = BOSS.find(x => x.f === f);
   if (!b) { $("svBOut").textContent = BL("✗ 先选一只怪物。", "✗ Pick a monster first.", "✗ 先選一隻怪物。", "✗ 先にモンスターを選んでください。"); return; }
+  if (NOCOUNTB[f]) { $("svBOut").textContent = BL("✗ 护锁刃龙是剧情限定怪，次数不能修改。", "✗ Guardian Arkveld is story-limited — its counts can't be changed.", "✗ 護鎖刃龍是劇情限定怪，次數不能修改。", "✗ 護鎖刃龍はストーリー限定のため、回数は変更できません。"); return; }
   const sl = $("svSlay").value === "" ? -1 : Math.max(0, Math.min(9999, parseInt($("svSlay").value, 10) || 0));
   const cp = $("svCap").value === "" ? -1 : Math.max(0, Math.min(9999, parseInt($("svCap").value, 10) || 0));
   const cv = $("svCrown").value.split(",").map(Number); const mn = cv[0], mx = cv[1];
@@ -1000,7 +1004,7 @@ $("svBAdd").onclick = () => {
 $("svRand").onclick = () => {
   const total = parseInt($("svRandN").value, 10) || 0;
   if (total < 1 || total > 199999) { sayMsg($("svBOut"), BL("先填一个总狩猎数（1–199999）。", "Enter a total first (1–199999).", "先填一個總狩獵數（1–199999）。", "先に合計狩猟数を入力してください（1–199999）。"), false); return; }
-  const pool = BOSS.filter(x => { const c = kcCurrent("B", x.f); return !c || (c.slay < 0 && c.cap < 0); });
+  const pool = BOSS.filter(x => { if (NOCOUNTB[x.f]) return false; const c = kcCurrent("B", x.f); return !c || (c.slay < 0 && c.cap < 0); });
   if (!pool.length) { sayMsg($("svBOut"), BL("全部怪物都已经在清单里了，没有新增。", "Every monster is already in your list — nothing added.", "全部怪物都已經在清單裡了，沒有新增。", "全モンスターはすでにリストにあります。"), false); return; }
   const shares = kcDistribute(total, pool.length, 12000);
   const enc = (n, p) => (n + 1).toString(36).toUpperCase().padStart(p, "0");
